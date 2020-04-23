@@ -1,17 +1,16 @@
-all: repos
+ENDPOINTS=api/{gists,issues,feeds,notifications,user{,/{subscriptions,starred}}}.json
+
 
 repos/%:
 	git clone https://github.com/$*.git $@
 
-repos: repos.json
+repos: api/user/repos.json
 	cat $< \
 	    | jq -r 'map(.full_name) | @tsv' \
 	    | xargs printf 'repos/%s\n' \
 	    | xargs $(MAKE) -j
 
-repos.json: credentials
-	curl -s -u "$(shell cat $<)" \
-	    "https://api.github.com/user/repos?per_page=100&page=[1-5]" \
+api/%.json: credentials
 	    | jq -s "[.[][]]" \
 	    > $@
 
