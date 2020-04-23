@@ -1,5 +1,6 @@
-ENDPOINTS=api/{gists,issues,feeds,notifications,user{,/{subscriptions,starred}}}.json
+ENDPOINTS=api/{gists,issues,feeds,notifications,user{,/{subscriptions,starred}}}.csv
 
+all: repos $(shell echo $(ENDPOINTS))
 
 repos/%:
 	git clone https://github.com/$*.git $@
@@ -11,11 +12,16 @@ repos: api/user/repos.json
 	    | xargs $(MAKE) -j
 
 api/%.json: credentials
+	@echo "Fetching $*"
+	@mkdir -p $(@D)
+	@curl -f -s -u "$(shell cat $<)" \
+	    "https://api.github.com/$*?per_page=100&page=[1-5]" \
 	    | jq -s "[.[][]]" \
 	    > $@
 
 clean:
-	rm repos.json
+	rm -r api
+
+%.csv: %.json; json2csv < $< > $@
 
 .PHONY: repos
-.INTERMEDIATE: repos.json
